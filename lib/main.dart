@@ -1,20 +1,25 @@
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const MainApp());
+import 'firebase/firebase_config.dart';
+import 'pages/rooms/rooms_core.dart';
+import 'pages/rooms/rooms_page.dart';
+import 'theme/app_theme.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await FirebaseConfig.initFirebase();
+  runApp(const _App());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class _App extends StatelessWidget {
+  const _App();
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
-      ),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.theme,
+      home: RoomsListScreen(roomsCore: RoomsCore()),
     );
   }
 }

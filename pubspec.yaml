@@ -7,8 +7,11 @@ environment:
   sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
+  firebase_core: ^2.22.0
+  firebase_database: ^10.4.7
   flutter:
     sdk: flutter
+  flutter_webrtc: ^0.9.48+hotfix.1
 
 dev_dependencies:
   flutter_test:

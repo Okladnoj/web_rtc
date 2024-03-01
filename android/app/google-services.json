@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "426570247106",
+    "firebase_url": "https://walkie-talkie-webrtc-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "walkie-talkie-webrtc",
+    "storage_bucket": "walkie-talkie-webrtc.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:426570247106:android:aaae9f832f3030f97d445b",
+        "android_client_info": {
+          "package_name": "com.example.walkie_talkie_webrtc"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAMXeYQV-itqu3vhR3XIAVLVKuMfOye8Bc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
