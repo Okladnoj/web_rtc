@@ -1,150 +1,165 @@
 import 'dart:developer';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:firebase_database/firebase_database.dart';
-import '../models/ice_candidate_model.dart';
+import 'signaling_service.dart';
 
 class WebRTCService {
-  RTCPeerConnection? peerConnection;
-  MediaStream? localStream;
-  final DatabaseReference _signalingRef;
-  String roomId; // Room ID to differentiate signaling messages by rooms
+  late final RTCPeerConnection _peerConnection;
+  late final MediaStream _localStream;
+  final SignalingService _signalingService;
 
-  WebRTCService(this.roomId)
-      : _signalingRef = FirebaseDatabase.instance.ref(
-          'rooms/$roomId/signaling',
-        );
+  WebRTCService(this._signalingService);
 
-  // Initialize the WebRTC connection
-  Future<void> initialize() async {
-    final configuration = {
-      'iceServers': [
-        {'urls': 'stun:stun.l.google.com:19302'},
-      ]
-    };
+  Future<void> initialize(
+    ValueChanged<MediaStream> local,
+    ValueChanged<MediaStream> remote,
+  ) async {
+    // Creating the peer connection
+    _peerConnection =
+        await createPeerConnection(_peerConfiguration, _peerConstraints);
+    log('Peer connection created');
 
-    final constraints = {
-      'mandatory': {
-        'OfferToReceiveAudio': true,
-        'OfferToReceiveVideo': false,
-      },
-      'optional': [],
-    };
+    // Getting the local audio stream
+    _localStream = await navigator.mediaDevices.getUserMedia(_mediaConstraints);
+    log('Local stream obtained');
 
-    peerConnection = await createPeerConnection(configuration, constraints);
+    for (var track in _localStream.getTracks()) {
+      log('---> Track added ${track.label}');
+      await _peerConnection.addTrack(track, _localStream);
+    }
+    log('Local tracks added to peer connection');
 
-    localStream = await navigator.mediaDevices.getUserMedia({
-      'audio': true,
-      'video': false,
-    });
+    _setupListeners(remote);
 
-    localStream?.getTracks().forEach((track) {
-      peerConnection?.addTrack(track, localStream!);
-    });
+    await _createOffer();
+    log('Offer created');
 
-    peerConnection?.onIceCandidate = (RTCIceCandidate candidate) {
-      _sendIceCandidate(candidate);
-    };
-
-    // Listen for signaling messages from other users
-    _listenForRemoteSession();
-    _listenForRemoteIceCandidate();
-
-    localStream!.getAudioTracks().forEach((track) {
-      log('Audio track enabled: ${track.enabled}, state: ${track.getConstraints()}');
-    });
-
-    peerConnection?.onIceConnectionState = (RTCIceConnectionState state) {
-      log('ICE Connection State has changed: $state');
-    };
-
-    peerConnection?.onConnectionState = (RTCPeerConnectionState state) {
-      log('Connection State has changed: $state');
-    };
+    await Future.delayed(const Duration(seconds: 1));
+    local(_localStream);
   }
 
-  // Create an offer to start a WebRTC connection
-  Future<void> createOffer() async {
-    final offer = await peerConnection?.createOffer({});
-    if (offer == null) return;
-    await peerConnection?.setLocalDescription(offer);
-    _sendSessionDescription(offer);
-  }
+  // Handling remote session descriptions
+  void _handleRemoteSession(RTCSessionDescription description) async {
+    log('Attempting to set remote description. Current signaling state: ${_peerConnection.signalingState}');
+    if (_peerConnection.signalingState ==
+        RTCSignalingState.RTCSignalingStateHaveLocalOffer) return;
 
-  void toggleMicrophone(bool enabled) {
-    if (localStream != null) {
-      localStream!.getAudioTracks().forEach((track) {
-        track.enabled = enabled;
-      });
+    await _peerConnection.setRemoteDescription(description);
+    log('Remote description successfully set: Type: ${description.type}, SDP: ${description.sdp}');
+
+    // If the description is an offer, we need to create an answer
+    if (description.type == 'offer') {
+      final answer = await _peerConnection.createAnswer();
+      await _peerConnection.setLocalDescription(answer);
+      log('Answer created and local description set: SDP: ${answer.sdp}');
+      log('Local description set: $answer');
+
+      // Send the answer through the signaling service
+      _signalingService.sendSessionDescription(answer);
     }
   }
 
-  // Handle an answer to an offer sent
-  void handleAnswer(String sdp) async {
-    RTCSessionDescription answer = RTCSessionDescription(sdp, 'answer');
-    await peerConnection?.setRemoteDescription(answer);
+  // Handling remote ICE candidates
+  void _handleRemoteIceCandidate(RTCIceCandidate candidate) async {
+    log('Adding remote ICE candidate: ${candidate.candidate}');
+    await _peerConnection.addCandidate(candidate);
+    log('Remote ICE candidate added: $candidate');
   }
 
-  // Add an ICE candidate received from a remote peer
-  void addIceCandidate(Map candidateMap) async {
-    final map = Map<String, dynamic>.from(candidateMap);
-    final candidateModel = IceCandidateModel.fromJson(map);
-    RTCIceCandidate iceCandidate = RTCIceCandidate(
-      candidateModel.candidate,
-      candidateModel.sdpMid,
-      candidateModel.sdpMLineIndex,
-    );
-    await peerConnection?.addCandidate(iceCandidate);
-  }
-
-  // Send the local session description (offer/answer) to a remote peer
-  void _sendSessionDescription(RTCSessionDescription description) {
-    _signalingRef.child('session').set({
-      'sdp': description.sdp,
-      'type': description.type,
+  // Toggle the local microphone on/off
+  void toggleMicrophone(bool enabled) {
+    _localStream.getAudioTracks().forEach((track) {
+      track.enabled = enabled;
     });
-  }
-
-  // Send a local ICE candidate to a remote peer
-  void _sendIceCandidate(RTCIceCandidate candidate) {
-    _signalingRef.child('iceCandidates').push().set({
-      'candidate': candidate.candidate,
-      'sdpMid': candidate.sdpMid,
-      'sdpMLineIndex': candidate.sdpMLineIndex,
-    });
-  }
-
-  // Listen for session descriptions (offers/answers) from remote peers
-  void _listenForRemoteSession() {
-    _signalingRef.child('session').onValue.listen((event) {
-      final data = event.snapshot.value;
-      if (data is Map) {
-        final sdp = data['sdp'];
-        final type = data['type'];
-        if (type == 'offer') {
-          // Handle the received offer
-        } else if (type == 'answer') {
-          handleAnswer(sdp);
-        }
-      }
-    });
-  }
-
-  // Listen for ICE candidates from remote peers
-  void _listenForRemoteIceCandidate() {
-    _signalingRef.child('iceCandidates').onValue.listen((event) {
-      final data = event.snapshot.value;
-      if (data is Map) {
-        data.forEach((key, value) {
-          addIceCandidate(value);
-        });
-      }
-    });
+    log('Microphone toggled: $enabled');
   }
 
   // Clean up resources
   void dispose() {
-    localStream?.dispose();
-    peerConnection?.close();
+    _localStream.dispose();
+    _peerConnection.close();
+    log('Resources disposed');
   }
+
+  // Create an offer to start the WebRTC connection
+  Future<void> _createOffer() async {
+    final offer = await _peerConnection.createOffer();
+    await _peerConnection.setLocalDescription(offer);
+    log('Local description set: $offer');
+
+    // Send the offer through the signaling service
+    await _signalingService.sendSessionDescription(offer);
+    log('Offer created and local description set: SDP: ${offer.sdp}');
+  }
+
+  void _setupListeners(ValueChanged<MediaStream> remote) {
+    // Adding the local audio stream to the peer connection
+
+    // Handling ICE candidates
+    _peerConnection.onIceCandidate = (RTCIceCandidate candidate) async {
+      // Send ICE candidate through the signaling service
+      log('Sending ICE candidate: ${candidate.candidate}');
+      await _signalingService.sendIceCandidate(candidate);
+      log('Local ICE candidate sent: $candidate');
+    };
+
+    _peerConnection.onTrack = (event) {
+      log('Track event received. Track kind: ${event.track.kind}, ID: ${event.track.id}');
+      final stream = event.streams.firstOrNull;
+      if (stream == null) return;
+      remote(stream);
+      log('Remote track added: ${event.track}');
+    };
+
+    // Handling ICE connection state changes
+    _peerConnection.onIceConnectionState = (RTCIceConnectionState state) {
+      log('ICE Connection State has changed: $state');
+    };
+
+    // Handling Peer connection state changes
+    _peerConnection.onConnectionState = (RTCPeerConnectionState state) {
+      log('Connection State has changed: $state');
+    };
+
+    _localStream.getAudioTracks().forEach((track) {
+      track.onEnded = () => log('Local audio track ended: ${track.id}');
+      track.onMute = () => log('Local audio track muted: ${track.id}');
+      track.onUnMute = () => log('Local audio track unMute: ${track.id}');
+    });
+
+    // Listening for remote session descriptions (offers/answers)
+    _signalingService.onSessionDescriptionReceived(_handleRemoteSession);
+
+    // Listening for remote ICE candidates
+    _signalingService.onIceCandidateReceived(_handleRemoteIceCandidate);
+  }
+
+  // WebRTC configuration (STUN/TURN servers)
+  static const _peerConfiguration = {
+    'iceServers': [
+      {
+        'urls': [
+          'stun:stun1.l.google.com:19302',
+          'stun:stun2.l.google.com:19302',
+        ]
+      }, // Example STUN server
+      // Add TURN servers here if needed
+    ]
+  };
+
+  // Constraints for the peer connection
+  static const _peerConstraints = {
+    'mandatory': {
+      'OfferToReceiveAudio': true,
+      'OfferToReceiveVideo': false,
+    },
+    'optional': [],
+  };
+
+  // Constraints for the Local Media connection
+  static const _mediaConstraints = {
+    'audio': true, // Enable audio
+    'video': false, // Disable video
+  };
 }

@@ -1,6 +1,6 @@
 import 'package:firebase_database/firebase_database.dart';
 
-import '../models/room_model.dart';
+import '../models/room/room_model.dart';
 
 class RoomsService {
   final DatabaseReference _roomsRef = FirebaseDatabase.instance.ref('rooms');

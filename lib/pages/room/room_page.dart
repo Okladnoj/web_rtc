@@ -1,6 +1,5 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import '../../views/app_loader.dart';
 import 'room_core.dart';
@@ -16,7 +15,7 @@ class RoomPage extends StatefulWidget {
 
 class _RoomPageState extends State<RoomPage> {
   void _speak() {
-    widget.coreRoom.createOffer();
+    widget.coreRoom.speak();
   }
 
   void _stop() {
@@ -26,9 +25,7 @@ class _RoomPageState extends State<RoomPage> {
   @override
   void initState() {
     super.initState();
-    widget.coreRoom.initWebRTC().catchError((error) {
-      log('Error initializing WebRTC: $error');
-    });
+    widget.coreRoom.initWebRTC();
   }
 
   @override
@@ -41,19 +38,74 @@ class _RoomPageState extends State<RoomPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.coreRoom.currentRoom.name), // Отображаем имя комнаты
+        title: Text(widget.coreRoom.currentRoom.name),
       ),
       body: StreamBuilder<bool>(
         stream: widget.coreRoom.loading,
         builder: (context, snapshot) {
           if (snapshot.data == true) return const AppLoader();
 
+          final size = MediaQuery.of(context).size.width / 2.5;
+
           return Column(
-            children: <Widget>[
+            children: [
               Expanded(
                 child: Center(
-                  child: Text('Room: ${widget.coreRoom.currentRoom.name}'),
-                  // MediaStream
+                  child: SizedBox(
+                    height: size + 32,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        StreamBuilder<RTCVideoRenderer>(
+                          stream: widget.coreRoom.localStream,
+                          builder: (context, snapshot) {
+                            final data = snapshot.data;
+
+                            return Column(
+                              children: [
+                                Container(
+                                  height: size,
+                                  width: size,
+                                  color: Colors.red.shade100,
+                                  child: data == null
+                                      ? null
+                                      : RTCVideoView(data, mirror: true),
+                                ),
+                                const Text(
+                                  'Local',
+                                  style: TextStyle(color: Colors.amber),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 12),
+                        StreamBuilder<RTCVideoRenderer>(
+                          stream: widget.coreRoom.remoteStream,
+                          builder: (context, snapshot) {
+                            final data = snapshot.data;
+
+                            return Column(
+                              children: [
+                                Container(
+                                  height: size,
+                                  width: size,
+                                  color: Colors.red.shade100,
+                                  child: data == null
+                                      ? null
+                                      : RTCVideoView(data, mirror: true),
+                                ),
+                                const Text(
+                                  'Remote',
+                                  style: TextStyle(color: Colors.amber),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               Padding(

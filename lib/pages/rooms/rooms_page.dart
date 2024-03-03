@@ -2,10 +2,12 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 
-import '../../models/room_model.dart';
+import '../../controllers/webrtc_controller.dart';
+import '../../models/room/room_model.dart';
+import '../../services/signaling/firebase_signaling_service.dart';
+import '../../services/webrtc/app_webrtc_service.dart';
 import '../../views/app_loader.dart';
-import '../room/room_core.dart';
-import '../room/room_page.dart';
+import '../room/core_room_page.dart';
 import 'rooms_core.dart';
 import 'views/create_room_dialog.dart';
 
@@ -43,7 +45,11 @@ class _RoomsListScreenState extends State<RoomsListScreen> {
 
   void _openRoom(RoomModel room) async {
     await Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return RoomPage(coreRoom: RoomCore(currentRoom: room));
+      final controller = WebRTCController(
+        FirebaseSignalingService(room: room),
+        AppWebRTCService(),
+      );
+      return CoreRoomPage(controller: controller);
     }));
   }
 

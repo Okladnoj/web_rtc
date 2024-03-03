@@ -3,36 +3,48 @@ import 'dart:developer';
 
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
-import '../../models/room_model.dart';
+import '../../models/room/room_model.dart';
+import '../../models/room/room_model_ui.dart';
 import '../../services/webrtc_service.dart';
 import '../../services/signaling_service.dart';
 
 class RoomCore {
   final RoomModel currentRoom;
-  late final WebRTCService _webrtcService;
-  late final SignalingService _signalingService;
+  final WebRTCService _webrtcService;
 
-  RoomCore({required this.currentRoom}) {
-    _webrtcService = WebRTCService(currentRoom.id);
-    _signalingService = SignalingService();
-  }
+  RoomCore({
+    required this.currentRoom,
+  }) : _webrtcService = WebRTCService(FirebaseSignalingService(currentRoom.id));
 
   bool _enabledMicrophone = false;
+  final _localRenderer = RTCVideoRenderer();
+  final _remoteRenderer = RTCVideoRenderer();
 
   final _controllerLoading = StreamController<bool>.broadcast();
-  final _controllerRemoteStream = StreamController<MediaStream>.broadcast();
+  final _controllerRemoteStream =
+      StreamController<RTCVideoRenderer>.broadcast();
+  final _controllerLocalStream = StreamController<RTCVideoRenderer>.broadcast();
+  final _controllerUI = StreamController<RoomModelUI>.broadcast();
 
   StreamSink<bool> get _sinkLoading => _controllerLoading.sink;
   Stream<bool> get loading => _controllerLoading.stream;
 
-  StreamSink<MediaStream> get _sinkRemoteStream => _controllerRemoteStream.sink;
-  Stream<MediaStream> get remoteStream => _controllerRemoteStream.stream;
+  StreamSink<RTCVideoRenderer> get _sinkRemoteStream =>
+      _controllerRemoteStream.sink;
+  Stream<RTCVideoRenderer> get remoteStream => _controllerRemoteStream.stream;
+
+  StreamSink<RTCVideoRenderer> get _sinkLocalStream =>
+      _controllerLocalStream.sink;
+  Stream<RTCVideoRenderer> get localStream => _controllerLocalStream.stream;
+
+  Stream<RoomModelUI> get observerUI => _controllerUI.stream;
 
   Future<void> initWebRTC() async {
     _loading(true);
     try {
-      await _webrtcService.initialize();
-      _setupListeners();
+      await _localRenderer.initialize();
+      await _remoteRenderer.initialize();
+      await _webrtcService.initialize(_onLocal, _onRemote);
     } catch (e) {
       log('Error initializing WebRTC: $e');
     } finally {
@@ -40,30 +52,20 @@ class RoomCore {
     }
   }
 
-  void _setupListeners() {
-    // Setting up listeners for ICE candidates, answers, and offers
-    _webrtcService.peerConnection?.onTrack = (RTCTrackEvent event) {
-      if (event.streams.isNotEmpty) {
-        // Remote peer stream
-        _sinkRemoteStream.add(event.streams.first);
-      }
-    };
+  void _onLocal(MediaStream value) {
+    _localRenderer.srcObject = value;
+    _sinkLocalStream.add(_localRenderer);
+  }
 
-    // Additional: Setting up signaling listeners
-    _signalingService.listenForAnswer((answer) {
-      _webrtcService.handleAnswer(answer.sdp);
-    });
-
-    _signalingService.listenForIceCandidates((candidate) {
-      _webrtcService.addIceCandidate(candidate.toJson());
-    });
+  void _onRemote(MediaStream value) {
+    _remoteRenderer.srcObject = value;
+    _sinkRemoteStream.add(_remoteRenderer);
   }
 
   // Creating an offer and sending it through the signaling service
-  Future<void> createOffer() async {
-    await _webrtcService.createOffer();
+  Future<void> speak() async {
     _enabledMicrophone = true;
-    // Offer is automatically sent via WebRTCService
+    _webrtcService.toggleMicrophone(_enabledMicrophone);
   }
 
   void stop() {
@@ -77,7 +79,9 @@ class RoomCore {
 
   void dispose() {
     _controllerLoading.close();
-    _controllerRemoteStream.close();
+    _controllerUI.close();
     _webrtcService.dispose();
+    _localRenderer.dispose();
+    _remoteRenderer.dispose();
   }
 }

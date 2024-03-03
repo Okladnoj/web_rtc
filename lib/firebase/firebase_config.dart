@@ -8,7 +8,10 @@ abstract class FirebaseConfig {
   static Future<void> initFirebase() async {
     final options = DefaultFirebaseOptions.currentPlatform;
     try {
-      await Firebase.initializeApp(options: options);
+      await Firebase.initializeApp(
+        // name: Platform.isAndroid ? null : options.projectId,
+        options: options,
+      );
     } catch (e) {
       log('Error during Firebase initialization: $e');
       rethrow;
