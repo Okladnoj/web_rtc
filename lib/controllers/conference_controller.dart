@@ -8,6 +8,7 @@ import '../services/manager/signal_manager_service.dart';
 import '../services/rtc/rtc_unit.dart';
 import '../services/rtc/signal_service.dart';
 import '../services/rtc/webrtc_service.dart';
+import '../utils/logger.dart';
 
 class ConferenceController {
   final SignalingManagerService _managerService;
@@ -46,6 +47,7 @@ class ConferenceController {
 
       Future<void> sendOffer(RTCSessionDescription value) async {
         final description = value.model.copyWith(peerId: userIdLocal);
+        Logger.printMagenta('sendOfferToRemotePeerNode');
         signalingService.sendOfferToRemotePeerNode(description);
       }
 
@@ -78,6 +80,7 @@ class ConferenceController {
 
       Future<void> sendAnswer(RTCSessionDescription value) async {
         final description = value.model.copyWith(peerId: userIdLocal);
+        Logger.printMagenta('sendAnswerToPeerNode');
         signalingService.sendAnswerToPeerNode(description);
       }
 
