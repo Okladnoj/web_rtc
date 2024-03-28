@@ -20,6 +20,8 @@ class WebRTCService {
 
     final offer = await service.peerConnection.createOffer();
 
+    await service.peerConnection.setLocalDescription(offer);
+
     await sendOffer(offer);
 
     await _registerPeerConnectionListeners(
@@ -31,8 +33,6 @@ class WebRTCService {
     localStream.getTracks().forEach((track) {
       service.peerConnection.addTrack(track, localStream);
     });
-
-    await service.peerConnection.setLocalDescription(offer);
 
     return service;
   }
