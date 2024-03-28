@@ -16,7 +16,7 @@ abstract class AppConstants {
   static const peerConstraints = {
     'mandatory': {
       'OfferToReceiveAudio': true,
-      'OfferToReceiveVideo': false,
+      'OfferToReceiveVideo': true,
     },
     'optional': [],
   };
@@ -24,6 +24,6 @@ abstract class AppConstants {
   // Constraints for the Local Media connection
   static const mediaConstraints = {
     'audio': true, // Enable audio
-    'video': false, // Disable video
+    'video': true, // Disable video
   };
 }

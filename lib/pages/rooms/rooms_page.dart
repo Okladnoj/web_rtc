@@ -1,13 +1,14 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 
-import '../../controllers/webrtc_controller.dart';
-import '../../models/room/room_model.dart';
-import '../../services/signaling/firebase_signaling_service.dart';
-import '../../services/webrtc/app_webrtc_service.dart';
+import '../../configs/constants.dart';
+import '../../controllers/conference_controller.dart';
+import '../../models/room/conference_model.dart';
+import '../../services/manager/signal_manager_service.dart';
 import '../../views/app_loader.dart';
-import '../room/core_room_page.dart';
+import '../room/room_page.dart';
 import 'rooms_core.dart';
 import 'views/create_room_dialog.dart';
 
@@ -37,18 +38,21 @@ class _RoomsListScreenState extends State<RoomsListScreen> {
     });
   }
 
-  Future<void> _deleteRoom(RoomModel room) async {
+  Future<void> _deleteRoom(ConferenceModel room) async {
     await widget.roomsCore.removeRoom(room).catchError((error, stack) {
       log('removeRoom', error: error, stackTrace: stack);
     });
   }
 
-  void _openRoom(RoomModel room) async {
+  void _openRoom(ConferenceModel room) async {
+    final uid = widget.roomsCore.uID;
+    const ctx = AppConstants.mediaConstraints;
+    final localMedia = await navigator.mediaDevices.getUserMedia(ctx);
+    final managerService = SignalingManagerFirebaseService(room, uid);
+    if (!mounted) return;
+
     await Navigator.push(context, MaterialPageRoute(builder: (context) {
-      final controller = WebRTCController(
-        FirebaseSignalingService(room: room),
-        AppWebRTCService(),
-      );
+      final controller = ConferenceController(managerService, localMedia);
       return CoreRoomPage(controller: controller);
     }));
   }
@@ -104,7 +108,7 @@ class _RoomsListScreenState extends State<RoomsListScreen> {
     return const Center(child: Text('No rooms available'));
   }
 
-  Widget _buildRoomItem(RoomModel room) {
+  Widget _buildRoomItem(ConferenceModel room) {
     return ListTile(
       title: Text(room.name),
       onTap: () => _openRoom(room),

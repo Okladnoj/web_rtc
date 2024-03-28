@@ -1,11 +1,11 @@
-class RoomModel {
+class ConferenceModel {
   final String id;
   final String name;
 
-  RoomModel({required this.id, required this.name});
+  ConferenceModel({required this.id, required this.name});
 
-  factory RoomModel.fromJson(Map<String, dynamic> json) {
-    return RoomModel(
+  factory ConferenceModel.fromJson(Map<String, dynamic> json) {
+    return ConferenceModel(
       id: json['id'],
       name: json['name'],
     );
