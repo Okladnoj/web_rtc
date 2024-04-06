@@ -18,12 +18,6 @@ class WebRTCService {
   ) async {
     final service = WebRTCService._(await _createPeerConnection());
 
-    final offer = await service.peerConnection.createOffer();
-
-    await service.peerConnection.setLocalDescription(offer);
-
-    await sendOffer(offer);
-
     await _registerPeerConnectionListeners(
       service,
       setCandidate,
@@ -33,6 +27,12 @@ class WebRTCService {
     localStream.getTracks().forEach((track) {
       service.peerConnection.addTrack(track, localStream);
     });
+
+    final offer = await service.peerConnection.createOffer();
+
+    await service.peerConnection.setLocalDescription(offer);
+
+    await sendOffer(offer);
 
     return service;
   }

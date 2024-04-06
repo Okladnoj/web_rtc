@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/room/conference_model.dart';
 import '../../models/rtc/session_description_model.dart';
+import '../rtc/signal_service.dart';
 
 abstract class SignalingManagerService {
   final ConferenceModel room;
@@ -18,9 +19,9 @@ abstract class SignalingManagerService {
 
   Future<void> listenRemoteNodes(AsyncValueSetter<String> onNewConnection);
 
-  Future<void> listenOwnNodes(
-    AsyncValueSetter<SessionDescriptionModel> onNewConnection,
-  );
+  Future<void> listenRemoteDeleteNode(ValueSetter<String> onDeleteConnection);
+
+  Future<void> listenOwnNodes(DescCallBack onNewConnection);
 
   String get connectionUrl => 'rooms/${room.id}';
 }
@@ -54,9 +55,7 @@ class SignalingManagerFirebaseService extends SignalingManagerService {
   }
 
   @override
-  Future<void> listenRemoteNodes(
-    AsyncValueSetter<String> onNewConnection,
-  ) async {
+  Future<void> listenRemoteNodes(onNewConnection) async {
     bool canProcessEvents = false;
 
     Future.delayed(const Duration(milliseconds: 150), () {
@@ -79,9 +78,29 @@ class SignalingManagerFirebaseService extends SignalingManagerService {
   }
 
   @override
-  Future<void> listenOwnNodes(
-    AsyncValueSetter<SessionDescriptionModel> onNewConnection,
-  ) async {
+  Future<void> listenRemoteDeleteNode(onDeleteConnection) async {
+    bool canProcessEvents = false;
+
+    Future.delayed(const Duration(milliseconds: 150), () {
+      canProcessEvents = true;
+    });
+
+    _dbRef //
+        .child(_users)
+        .onChildRemoved
+        .listen((event) async {
+      if (!canProcessEvents) return;
+      final value = event.snapshot.value;
+      if (value is! Map) return;
+      final id = value['id'];
+      if (id is! String || id.isEmpty) return;
+      if (userIdLocal == id) return;
+      onDeleteConnection(id);
+    });
+  }
+
+  @override
+  Future<void> listenOwnNodes(onNewConnection) async {
     final sub = _dbRef //
         .child(_users)
         .child(userIdLocal)

@@ -43,4 +43,6 @@ class RtcUnit {
   }
 
   RTCVideoRenderer get remoteRenderer => _rtcService.remoteRenderer;
+
+  String get userIdRemote => _signalingService.userIdRemote;
 }

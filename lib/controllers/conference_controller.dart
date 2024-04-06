@@ -33,6 +33,12 @@ class ConferenceController {
 
     await _managerService.createUserNode();
 
+    await _listenRemoteNodes();
+
+    await _listenOwnNodes();
+  }
+
+  Future<void> _listenRemoteNodes() async {
     await _managerService.listenRemoteNodes((value) async {
       final connectionUrl = _managerService.connectionUrl;
       final userIdLocal = _managerService.userIdLocal;
@@ -66,6 +72,13 @@ class ConferenceController {
       _updateUI();
     });
 
+    await _managerService.listenRemoteDeleteNode((userIdRemote) async {
+      units.removeWhere((unit) => unit.userIdRemote == userIdRemote);
+      _updateUI();
+    });
+  }
+
+  Future<void> _listenOwnNodes() async {
     await _managerService.listenOwnNodes((remoteDescription) async {
       final connectionUrl = _managerService.connectionUrl;
       final userIdLocal = _managerService.userIdLocal;
