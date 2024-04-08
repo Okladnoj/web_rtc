@@ -16,7 +16,7 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
     <application
-        android:label="walkie_talkie_webrtc"
+        android:label="Video Chat"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

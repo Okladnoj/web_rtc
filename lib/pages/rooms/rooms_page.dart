@@ -5,6 +5,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import '../../configs/constants.dart';
 import '../../controllers/conference_controller.dart';
+import '../../gen/assets.gen.dart';
 import '../../models/room/conference_model.dart';
 import '../../services/manager/signal_manager_service.dart';
 import '../../views/app_loader.dart';
@@ -63,6 +64,11 @@ class _RoomsListScreenState extends State<RoomsListScreen> {
       appBar: AppBar(title: const Text('Available Rooms')),
       body: Stack(
         children: [
+          Assets.images.background.image(
+            height: double.infinity,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
           _buildRooms(),
           _buildLoader(),
         ],

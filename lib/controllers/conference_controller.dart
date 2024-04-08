@@ -30,6 +30,7 @@ class ConferenceController {
   Future<void> init() async {
     await _localRender.initialize();
     await _localRender.setSrcObject(stream: _localMedia);
+    _updateUI();
 
     await _managerService.createUserNode();
 
@@ -134,13 +135,17 @@ class ConferenceController {
     for (final track in _localMedia.getTracks()) {
       track.enabled = true;
     }
+    _updateUI();
   }
 
   void stop() {
     for (final track in _localMedia.getTracks()) {
       track.enabled = false;
     }
+    _updateUI();
   }
+
+  bool get enabled => _localMedia.getTracks().any((track) => track.enabled);
 
   void _updateUI() {
     _controller.add(Object());

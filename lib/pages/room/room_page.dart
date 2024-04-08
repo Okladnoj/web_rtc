@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import '../../controllers/conference_controller.dart';
+import '../../gen/assets.gen.dart';
 import '../../views/app_loader.dart';
 
 class CoreRoomPage extends StatefulWidget {
@@ -34,18 +35,26 @@ class _CoreRoomPageState extends State<CoreRoomPage> {
   Widget build(BuildContext context) {
     final name = widget.controller.conferenceName;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(name),
-      ),
+      appBar: AppBar(title: Text(name)),
       body: StreamBuilder<bool>(
         stream: widget.controller.loading,
         builder: (context, snapshot) {
           if (snapshot.data == true) return const AppLoader();
 
-          return Column(
+          return Stack(
             children: [
-              Expanded(child: _buildContent()),
-              _buildButtons(),
+              Assets.images.background.image(
+                height: double.infinity,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+              Column(
+                children: [
+                  const SizedBox(height: 8),
+                  Expanded(child: _buildContent()),
+                  _buildButtons(),
+                ],
+              ),
             ],
           );
         },
@@ -60,25 +69,34 @@ class _CoreRoomPageState extends State<CoreRoomPage> {
         final size = MediaQuery.of(context).size.width / 1.5;
         final localRenderer = widget.controller.localRenderer;
         final remoteRenderers = widget.controller.remoteRenderers;
-        if (localRenderer.srcObject == null) return _buildNoLocalMedia();
-        if (remoteRenderers.isEmpty) return _buildNoRemoteMedia();
+        final enabled = widget.controller.enabled;
+        const gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+        );
         return Column(
           children: [
-            Container(
-              height: size,
-              width: size,
-              color: Colors.red.shade100,
-              child: _buildLocalMedia(localRenderer),
+            AnimatedOpacity(
+              opacity: enabled ? 1 : 0.4,
+              duration: const Duration(seconds: 1),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(32),
+                child: Container(
+                  height: size,
+                  width: size,
+                  color: Colors.deepOrangeAccent,
+                  child: _buildLocalMedia(localRenderer),
+                ),
+              ),
             ),
             Expanded(
-              child: GridView(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                ),
-                children: [
-                  ...remoteRenderers.map(_buildRemoteMedia),
-                ],
-              ),
+              child: remoteRenderers.isEmpty
+                  ? _buildNoRemoteMedia()
+                  : GridView(
+                      gridDelegate: gridDelegate,
+                      children: [
+                        ...remoteRenderers.map(_buildRemoteMedia),
+                      ],
+                    ),
             ),
           ],
         );
@@ -91,10 +109,11 @@ class _CoreRoomPageState extends State<CoreRoomPage> {
   }
 
   Widget _buildNoRemoteMedia() {
-    return const Center(child: Text('No remoute Media'));
+    return const Center(child: Text('No remote Media'));
   }
 
   Widget _buildLocalMedia(RTCVideoRenderer renderer) {
+    if (renderer.srcObject == null) return _buildNoLocalMedia();
     return RTCVideoView(renderer, mirror: true);
   }
 
@@ -106,22 +125,32 @@ class _CoreRoomPageState extends State<CoreRoomPage> {
   }
 
   Widget _buildButtons() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ElevatedButton(
-            onPressed: widget.controller.speak,
-            child: const Text('Speak'),
-          ),
-          const SizedBox(width: 20),
-          ElevatedButton(
-            onPressed: widget.controller.stop,
-            child: const Text('Stop'),
-          ),
-        ],
-      ),
+    final style = ElevatedButton.styleFrom(
+      backgroundColor: Colors.deepOrangeAccent,
     );
+    return StreamBuilder<Object>(
+        stream: widget.controller.onActivePeersChanged,
+        builder: (context, snapshot) {
+          final enabled = widget.controller.enabled;
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  style: enabled ? style : null,
+                  onPressed: widget.controller.speak,
+                  child: const Text('Speak'),
+                ),
+                const SizedBox(width: 20),
+                ElevatedButton(
+                  style: !enabled ? style : null,
+                  onPressed: widget.controller.stop,
+                  child: const Text('Stop'),
+                ),
+              ],
+            ),
+          );
+        });
   }
 }
