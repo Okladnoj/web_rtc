@@ -3,7 +3,7 @@
     "project_number": "426570247106",
     "firebase_url": "https://walkie-talkie-webrtc-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "walkie-talkie-webrtc",
-    "storage_bucket": "walkie-talkie-webrtc.appspot.com"
+    "storage_bucket": "walkie-talkie-webrtc.firebasestorage.app"
   },
   "client": [
     {

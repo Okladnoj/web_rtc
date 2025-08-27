@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -55,7 +52,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '426570247106',
     projectId: 'walkie-talkie-webrtc',
     databaseURL: 'https://walkie-talkie-webrtc-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'walkie-talkie-webrtc.appspot.com',
+    storageBucket: 'walkie-talkie-webrtc.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
@@ -64,7 +61,19 @@ class DefaultFirebaseOptions {
     messagingSenderId: '426570247106',
     projectId: 'walkie-talkie-webrtc',
     databaseURL: 'https://walkie-talkie-webrtc-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'walkie-talkie-webrtc.appspot.com',
+    storageBucket: 'walkie-talkie-webrtc.firebasestorage.app',
     iosBundleId: 'com.example.walkieTalkieWebrtc',
   );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyCulmI1VbLhDmFUTq_1XWRnLttRvdJ2xSY',
+    appId: '1:426570247106:web:cc623199a60e9cb17d445b',
+    messagingSenderId: '426570247106',
+    projectId: 'walkie-talkie-webrtc',
+    authDomain: 'walkie-talkie-webrtc.firebaseapp.com',
+    databaseURL: 'https://walkie-talkie-webrtc-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'walkie-talkie-webrtc.firebasestorage.app',
+    measurementId: 'G-HYC06LZJ26',
+  );
+
 }

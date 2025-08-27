@@ -45,7 +45,7 @@ abstract class AppTheme {
         backgroundColor: Colors.amber,
         foregroundColor: Colors.black,
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
