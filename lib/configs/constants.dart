@@ -7,8 +7,14 @@ abstract class AppConstants {
           'stun:stun1.l.google.com:19302',
           'stun:stun2.l.google.com:19302',
         ]
-      }, // Example STUN server
-      // Add TURN servers here if needed
+      }, // STUN servers
+      {
+        'urls': [
+          'turn:193.23.249.198:3478',
+        ],
+        'username': 'testuser',
+        'credential': 'testpass',
+      }, // TURN server
     ]
   };
 
